@@ -1,5 +1,5 @@
 # Hg isotopes data analysis
-Data analysis and visualization atmospheric Hg isotope data, presented in Gačnik et al. (_under review_), "Mercury isotopes in the atmosphere: synthesis, perspectives, and analytical considerations"
+Data analysis and visualization atmospheric Hg isotope data, presented in Gačnik et al. (2025), "Mercury isotopes in the atmosphere: synthesis, perspectives, and analytical considerations", _Trends in Analytical Chemistry_
 
 ## Instructions for use:
 - open the code containted in the file "Data analysis_for article",
