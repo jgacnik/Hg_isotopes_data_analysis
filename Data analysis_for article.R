@@ -1,15 +1,15 @@
 ###############################################################################
-# DATA ANALYSIS AND VISUALIZATION for Gačnik et al. (2024)
-# CITATION: Gačnik, J., Živković, I., Horvat, M.: Mercury isotopes in the atmosphere: synthesis, perspectives, and analytical considerations; Trends in Analytical Chemistry; 2024
+# DATA ANALYSIS AND VISUALIZATION for Gačnik et al. (2025)
+# CITATION: Gačnik, J., Živković, I., Horvat, M.: Mercury isotopes in the atmosphere: synthesis, perspectives, and analytical considerations; Trends in Analytical Chemistry; 2025
 # AUTHOR: JAN GAČNIK, JUNE 2024
 # R version: 4.4.0
 ###############################################################################
 
 # Do this step the first time only! Installation of needed packages
-install.packages(c("tidyverse", "ggforce", "lmodel2", "multcomp", "ggpmisc", "readxl"))
+install.packages(c("MANOVA.RM", "tidyverse", "ggforce", "lmodel2", "multcomp", "ggpmisc", "readxl"))
 
 # CHANGE THE FOLLOWING PARAMETERS:
-path <- "ENTER_PATH_HERE" # Change to your working directory path, use "/" and not "\", make sure the literature data .xlsx file is in the same directory
+path <- "ADD/PATH/TO/DIRECTORY" # Change to your working directory path, use "/" and not "\", make sure the literature data .xlsx file is in the same directory
 data_filename <- "Literature data all.xlsx" # Enter file name of the data containing Hg isotope data (available in Supplement), has to be a .csv file
 palette_fig1 <- c("honeydew3", "burlywood3", "bisque4", "grey20") # Color palette for figure 1 plot
 palette_fig2a <- c("grey30", "olivedrab3") # Color palette for figure 2a plot
@@ -26,7 +26,7 @@ palette_fig6 <- c("#5E96A1", "#C3483C") # Color palette for figure 6 plot
 ###############################################################################
 # READING, FILTERING and RESTRUCTURING data
 setwd(path)
-lapply(c("tidyverse", "ggforce", "lmodel2", "multcomp", "ggpmisc", "readxl"), require, character.only = TRUE)
+lapply(c("MANOVA.RM", "tidyverse", "ggforce", "lmodel2", "multcomp", "ggpmisc", "readxl"), require, character.only = TRUE)
 data <- read_excel(data_filename, skip = 1) %>%
   mutate(Year = as.numeric(str_extract(Author,"(\\d+)")))
 
@@ -35,8 +35,8 @@ data_meta <- mutate(data, Species = case_when(
   Species == "TGM"  ~ "TGM/GEM",
   TRUE ~ Species)) %>%
   mutate(Author = case_when(
-  Author == "Tang 2017*"  ~ "Tang 2017",
-  TRUE ~ Author)) %>%
+    Author == "Tang 2017*"  ~ "Tang 2017",
+    TRUE ~ Author)) %>%
   dplyr::select(Author, Species, Year) %>%
   unique()
 
@@ -80,13 +80,13 @@ data_emission_2 <- subset(data, data$Type == "Emission anthropogenic") %>%
     TRUE ~ Type))
 
 boxplot_data <- data_ambient_tgm %>%
-  pivot_longer(cols = c(8, 22), names_to = "Delta type", values_to = "Value") 
+  pivot_longer(cols = c(10, 24), names_to = "Delta type", values_to = "Value") 
 
 boxplot_data_RM <- data_ambient %>%
-  pivot_longer(cols = c(8, 22), names_to = "Delta type", values_to = "Value")
+  pivot_longer(cols = c(10, 24), names_to = "Delta type", values_to = "Value")
 
 boxplot_data_PAS <- data_ambient_tgm %>%
-  pivot_longer(cols = c(8, 10, 12, 14, 16, 18, 20, 22), names_to = "Delta type", values_to = "Value") %>%
+  pivot_longer(cols = c(10, 12, 14, 16, 18, 20, 22, 24), names_to = "Delta type", values_to = "Value") %>%
   mutate(`Delta type` = case_when(
     `Delta type` == "d204Hg"  ~ "\u03b4^204*Hg",
     `Delta type` == "d202Hg"  ~ "\u03b4^202*Hg",
@@ -103,7 +103,7 @@ boxplot_data_PAS_urban <- subset(boxplot_data_PAS, boxplot_data_PAS$Type == "Urb
 
 boxplot_data_PAS_remote <- subset(boxplot_data_PAS, boxplot_data_PAS$Type == "Remote")
 
-# PLOTS and STATYSTICAL ANALYSES
+# PLOTS and STATYSTICAL ANALYSES  
 ###############################################################################
 # Figure 1: Number of publications for atmospheric Hg isotopes
 ggplot(data = data_meta) +
@@ -352,7 +352,7 @@ ggplot(data = data_ambient_tgm) +
   scale_x_continuous(labels = ~sub("-", "\u2212", .x)) +
   scale_y_continuous(labels = ~sub("-", "\u2212", .x)) +
   stat_ma_line(aes(x = D201Hg, y = D199Hg), linewidth = 0.6, method = "RMA",
-              range.y = "interval", range.x = "interval") +
+               range.y = "interval", range.x = "interval") +
   stat_ma_eq(mapping = use_label("eq", "R2", sep = "*`;`~", aes(x = D201Hg, y = D199Hg)), method = "RMA",
              range.y = "interval", range.x = "interval", size = 2.1) +
   facet_wrap(~ Type, ncol = 2) +
@@ -393,6 +393,17 @@ ggplot(data = data_ambient_tgm_noMB) +
         legend.position = "none")
 ggsave(filename = "Figure_5b.png", device = "png", width = 90, height = 77, units = "mm", dpi = 600)
 
+# Stat tests for comparison of preconcentration methods (gold versus carbon traps)
+# MANOVA test, accounting for sampling site type ("Type") as the covariate
+data_method_comparison <- data_ambient_tgm %>%
+  filter(`Preconcentration method` != "Passive air sampler")
+data_method_comparison$Type = as.factor(data_method_comparison$Type)
+data_method_comparison$`Preconcentration method` = as.factor(data_method_comparison$`Preconcentration method`)
+d202Hg <- data_method_comparison$d202Hg
+D199Hg <- data_method_comparison$D199Hg
+manova_method <- manova(cbind(d202Hg, D199Hg) ~ `Preconcentration method` + Type, data = data_method_comparison)
+summary(manova_method)
+
 ###############################################################################
 # Figure 6: TGM data, passive versus active approaches, d202 versus D199
 data_ambient_tgm <- data_ambient_tgm[order(data_ambient_tgm$Subspecies, decreasing= FALSE), ]
@@ -422,14 +433,39 @@ ggplot(data = data_ambient_tgm) +
         legend.position.inside = c(0.82, 0.25))
 ggsave(filename = "Figure_6.png", device = "png", width = 90, height = 70, units = "mm", dpi = 600)
 
-# Supplementary table, creates a .csv file with medians/first quartiles/third quartiles  for passive versus active sampling at urban and remote sites
+###############################################################################
+# SUPPLEMENTARY MATERIAL
+# Supplementary Table S1
+data_meta_2 <- mutate(data, Species = case_when(
+  Species == "GEM"  ~ "TGM/GEM",
+  Species == "TGM"  ~ "TGM/GEM",
+  Species == "GOM"  ~ "RM",
+  Species == "PBM"  ~ "RM", 
+  TRUE ~ Species)) %>%
+  mutate(Author = case_when(
+    Author == "Tang 2017*"  ~ "Tang 2017",
+    TRUE ~ Author))
+data_unique <- unique(data_meta_2[,c("Author", "DOI", "Type", "Preconcentration method", "Upstream filter", "Species")])
+data_unique <- data_meta_2 %>%
+  group_by(Author, DOI, Type, `Preconcentration method`, `Upstream filter`, Species) %>%
+  summarise("N of meas." = n(), .groups = 'drop')
+write.csv(data_unique, "data_unique.csv", row.names = FALSE)
+
+# Supplementary Tables S2-S4, creates a .csv file with medians/first quartiles/third quartiles  for passive versus active sampling at urban and remote sites
 median_remote <- boxplot_data_PAS_remote %>%
   group_by(`Delta type`, Subspecies) %>%
-  summarise("Median" = median(Value, na.rm = TRUE), "First quartile" = quantile(Value, 0.25, na.rm = TRUE), "Third quartile" = quantile(Value, 0.75, na.rm = TRUE)) %>%
+  summarise("Number of measurements" = n(), "Median" = median(Value, na.rm = TRUE), "First quartile" = quantile(Value, 0.25, na.rm = TRUE), "Third quartile" = quantile(Value, 0.75, na.rm = TRUE)) %>%
   mutate("Site type" = "Remote", "Median" = sub("-", "\u2212", Median))
 median_urban <- boxplot_data_PAS_urban %>%
   group_by(`Delta type`, Subspecies) %>%
-  summarise("Median" = median(Value, na.rm = TRUE), "First quartile" = quantile(Value, 0.25, na.rm = TRUE), "Third quartile" = quantile(Value, 0.75, na.rm = TRUE)) %>%
+  summarise("Number of measurements" = n(), "Median" = median(Value, na.rm = TRUE), "First quartile" = quantile(Value, 0.25, na.rm = TRUE), "Third quartile" = quantile(Value, 0.75, na.rm = TRUE)) %>%
   mutate("Site type" = "Urban", , "Median" = sub("-", "\u2212", Median))
 median_all <- rbind(median_remote, median_urban)
 write.csv(median_all, "Pass vs act table.csv")
+
+data_method <- data_ambient %>%
+  group_by(Species, Type, `Preconcentration method`, `Upstream filter`) %>%
+  summarise(count = n()) %>%
+  filter(Species == "TGM/GEM",
+         `Preconcentration method` != "Passive air sampler")
+write.csv(data_method, "Gold vs carbon table.csv")
