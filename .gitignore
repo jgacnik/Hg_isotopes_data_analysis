@@ -1,0 +1,8 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Generated analysis outputs
+figures/*.png
+tables/*.csv
